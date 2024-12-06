@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import csv  
+import re
 
 def generar_csv_clientes(df, output_path):
     """
@@ -35,6 +37,17 @@ def generar_csv_clientes(df, output_path):
         "Record status": {"obligatorio": False},
     }
 
+    # Verificar y completar columnas faltantes
+    for columna in columnas_requeridas.keys():
+        if columna not in df.columns:
+            df[columna] = None  # Rellenar con valores vacíos
+
+    valores_titulo_permitidos = {"Mr", "Mrs", "Miss", "Company"}
+
+    def es_email_valido(email):
+        """Valida el formato de un email."""
+        return bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email))
+
     def validar_fila(fila):
         errores = []
         for columna, reglas in columnas_requeridas.items():
@@ -46,6 +59,22 @@ def generar_csv_clientes(df, output_path):
             if columna == "Vehicle registration" and not pd.isna(fila[columna]):
                 if any(sep in str(fila[columna]) for sep in [" ", "-", "_"]):
                     errores.append(f"El campo 'Vehicle registration' no debe contener separadores.")
+
+        # Validaciones adicionales
+        if not pd.isna(fila["Customer title"]) and fila["Customer title"] not in valores_titulo_permitidos:
+            errores.append(f"El campo 'Customer title' contiene un valor no permitido: {fila['Customer title']}.")
+        if not pd.isna(fila["Customer email"]) and not es_email_valido(fila["Customer email"]):
+            errores.append(f"El campo 'Customer email' no tiene un formato válido: {fila['Customer email']}.")
+        campos_contacto = [
+            fila["Customer home phone"],
+            fila["Customer office phone"],
+            fila["Customer mobile phone"],
+            fila["Customer email"],
+        ]
+        if all(pd.isna(campo) for campo in campos_contacto):
+            errores.append("Debe haber al menos un campo de contacto relleno (teléfono o email).")
+        if not pd.isna(fila["VIN"]) and len(str(fila["VIN"])) != 17:
+            errores.append(f"El campo 'VIN' debe tener exactamente 17 caracteres: {fila['VIN']}.")
         return errores
 
     df_validado = df.copy()
@@ -62,5 +91,14 @@ def generar_csv_clientes(df, output_path):
             print(f"Índice: {error['Índice']}, Errores: {error['Errores']}")
 
     columnas_finales = list(columnas_requeridas.keys())
-    df_validado[columnas_finales].to_csv(output_path, sep=";", index=False, encoding="utf-8-sig")
+    df_validado[columnas_finales].to_csv(
+        output_path,
+        sep=";",
+        index=False,
+        encoding="utf-8-sig",
+        quoting=csv.QUOTE_ALL,
+        quotechar='"'
+    )
     print(f"Archivo 'clients.csv' generado correctamente en {output_path}.")
+
+
