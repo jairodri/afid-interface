@@ -102,3 +102,83 @@ def generar_csv_clientes(df, output_path):
     print(f"Archivo 'clients.csv' generado correctamente en {output_path}.")
 
 
+def generar_csv_facturas(df, output_path):
+    """
+    Genera el fichero factures.csv basado en las especificaciones.
+
+    Parámetros:
+    - df: DataFrame de Pandas con los datos de facturas.
+    - output_path: Ruta de salida para guardar el archivo factures.csv.
+    """
+    columnas_requeridas = {
+        "SIRET": {"obligatorio": True, "longitud": 14},
+        "Invoice ID": {"obligatorio": True},
+        "Invoice date": {"obligatorio": True},
+        "Invoice amount": {"obligatorio": False},
+        "Vehicle registration": {"obligatorio": True},
+        "Km": {"obligatorio": False},
+        "VIN": {"obligatorio": False},
+        "Customer ID": {"obligatorio": True},
+        "Package code": {"obligatorio": False},
+        "Package description": {"obligatorio": False},
+        "Operation code": {"obligatorio": False},
+        "Operation description": {"obligatorio": False},
+        "Parts reference": {"obligatorio": False},
+        "Parts brand": {"obligatorio": False},
+        "Parts quantity": {"obligatorio": False},
+        "Parts description": {"obligatorio": False},
+    }
+
+    def validar_fila(fila):
+        errores = []
+        # Validaciones generales
+        for columna, reglas in columnas_requeridas.items():
+            if reglas["obligatorio"] and pd.isna(fila[columna]):
+                errores.append(f"Campo obligatorio '{columna}' está vacío.")
+            if columna == "SIRET" and not pd.isna(fila[columna]):
+                if len(str(fila[columna])) != 14 or not str(fila[columna]).isalnum():
+                    errores.append(f"El campo 'SIRET' debe tener exactamente 14 caracteres alfanuméricos.")
+            if columna == "Vehicle registration" and not pd.isna(fila[columna]):
+                if any(sep in str(fila[columna]) for sep in [" ", "-", "_"]):
+                    errores.append(f"El campo 'Vehicle registration' no debe contener separadores.")
+            if columna == "VIN" and not pd.isna(fila[columna]):
+                if len(str(fila[columna])) != 17:
+                    errores.append(f"El campo 'VIN' debe tener exactamente 17 caracteres.")
+
+        # Validación de Invoice date
+        if not pd.isna(fila["Invoice date"]):
+            try:
+                pd.to_datetime(fila["Invoice date"], format="%Y-%m-%d")
+            except ValueError:
+                errores.append(f"El campo 'Invoice date' no tiene un formato válido: {fila['Invoice date']}.")
+
+        return errores
+
+    df_validado = df.copy()
+    errores = []
+    for index, fila in df_validado.iterrows():
+        errores_fila = validar_fila(fila)
+        if errores_fila:
+            errores.append({"Índice": index, "Errores": errores_fila})
+            df_validado.drop(index, inplace=True)
+
+    if errores:
+        print("Se encontraron las siguientes filas con errores y se omitieron del archivo generado:")
+        for error in errores:
+            print(f"Índice: {error['Índice']}, Errores: {error['Errores']}")
+
+    # Asegurarse de que todas las columnas requeridas están presentes
+    for columna in columnas_requeridas.keys():
+        if columna not in df_validado.columns:
+            df_validado[columna] = None  # Rellenar con valores vacíos si la columna falta
+
+    columnas_finales = list(columnas_requeridas.keys())
+    df_validado[columnas_finales].to_csv(
+        output_path,
+        sep=";",
+        index=False,
+        encoding="utf-8-sig",
+        quoting=csv.QUOTE_ALL,
+        quotechar='"'
+    )
+    print(f"Archivo 'factures.csv' generado correctamente en {output_path}.")
