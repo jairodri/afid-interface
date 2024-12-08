@@ -114,7 +114,7 @@ def generar_csv_clientes(df, output_path, error_file_path):
     print(f"Archivo 'clients.csv' generado correctamente en {output_path}.")
 
 
-def generar_csv_facturas(df, output_path):
+def generar_csv_facturas(df, output_path, error_file_path):
     """
     Genera el fichero factures.csv basado en las especificaciones.
 
@@ -175,9 +175,17 @@ def generar_csv_facturas(df, output_path):
             df_validado.drop(index, inplace=True)
 
     if errores:
-        print("Se encontraron las siguientes filas con errores y se omitieron del archivo generado:")
-        for error in errores:
-            print(f"Índice: {error['Índice']}, Errores: {error['Errores']}")
+        # Crear el archivo de errores
+        with open(error_file_path, "w", encoding="utf-8-sig") as error_file:
+            error_file.write("Índice;Errores\n")
+            for error in errores:
+                error_file.write(f"{error['Índice']};{' | '.join(error['Errores'])}\n")
+        print(f"Archivo de errores generado en {error_file_path}")
+
+    # if errores:
+    #     print("Se encontraron las siguientes filas con errores y se omitieron del archivo generado:")
+    #     for error in errores:
+    #         print(f"Índice: {error['Índice']}, Errores: {error['Errores']}")
 
     # Asegurarse de que todas las columnas requeridas están presentes
     for columna in columnas_requeridas.keys():

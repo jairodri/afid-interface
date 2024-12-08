@@ -3,6 +3,7 @@ import configparser
 import pandas as pd
 import sys
 from utils.utiles import limpiar_separadores
+from test.tests import generar_dataframe_prueba_clientes, generar_dataframe_prueba_facturas
 
 
 def conectar_base_datos():
@@ -74,7 +75,7 @@ def leer_datos_clientes():
         FROM {clientes_table} AS c
         LEFT JOIN {vehiculos_table} AS v
         ON c.{join_clientes_key} = v.{join_vehiculos_key}
-        OREDE BY c.{join_clientes_key}
+        ORDER BY c.{join_clientes_key}
     """
 
     # Conectar a la base de datos y ejecutar la consulta
@@ -95,4 +96,54 @@ def leer_datos_clientes():
 
     return df
 
+
+def leer_datos_facturas():
+    """
+    Recupera los datos de facturas desde un `JOIN` entre las tablas de facturas y clientes,
+    utilizando el mapeo configurado en config.ini.
+
+    Retorna:
+        pd.DataFrame: DataFrame con los datos necesarios.
+    """
+    # Leer configuración del archivo config.ini
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+
+    if "FACTURAS" not in config:
+        raise ValueError("La sección 'FACTURAS' no está definida en config.ini")
+
+    # Recuperar las tablas y claves para el JOIN
+    facturas_table = config["FACTURAS"].get("facturas_table")
+
+    if not (facturas_table):
+        df = generar_dataframe_prueba_facturas()
+        return df
+        raise ValueError("Los parámetros para las tablas y el JOIN no están completamente definidos en config.ini")
+
+    # Construir el mapeo de campos
+    field_map = {
+        field: value for field, value in config.items("FACTURAS")
+        if field not in ["facturas_table"]
+    }
+
+    # Construir los campos para la consulta SQL
+    campos_sql = ", ".join(
+        [f"{valor} AS {campo}" if valor else f"NULL AS {campo}" for campo, valor in field_map.items()]
+    )
+
+    # Construir la consulta SQL con el JOIN
+    query = f"""
+        SELECT {campos_sql}
+        FROM {facturas_table} AS f
+
+    """
+
+    # Conectar a la base de datos y ejecutar la consulta
+    conn = conectar_base_datos()
+    try:
+        df = pd.read_sql_query(query, conn)
+    finally:
+        conn.close()
+
+    return df
 

@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import configparser
 from modules.exporters import generar_csv_clientes, generar_csv_facturas
-from modules.database import leer_datos_clientes
+from modules.database import leer_datos_clientes, leer_datos_facturas
 from test.tests import generar_dataframe_prueba_clientes, generar_dataframe_prueba_facturas
 from utils.utiles import generar_fichero_zip
 import sys
@@ -16,7 +16,6 @@ def main():
     # Recuperar parámetros
     siret_code = config["GENERAL"].get("siret_code")
     output_directory = config["GENERAL"].get("output_directory", "data")
-    error_file = config["GENERAL"].get("error_file", "errors.csv")
 
     # Crear la carpeta si no existe
     os.makedirs(output_directory, exist_ok=True)
@@ -32,21 +31,27 @@ def main():
 
     # Rutas de salida
     ruta_salida_clientes = os.path.join(output_directory, "clients.csv")
-    ruta_archivo_errores = os.path.join(output_directory, error_file)
+    error_file_clientes = config["GENERAL"].get("error_file_clientes", "errors.csv")
+    ruta_archivo_errores = os.path.join(output_directory, error_file_clientes)
 
     # Generar el archivo CSV de clientes
     generar_csv_clientes(df_clientes, ruta_salida_clientes, ruta_archivo_errores)
 
-    # Generar datos de prueba para facturas
-    df_facturas = generar_dataframe_prueba_facturas()
+    # Leer datos de facturas desde la base de datos
+    df_facturas = leer_datos_facturas()
+    # # Generar datos de prueba para facturas
+    # df_facturas = generar_dataframe_prueba_facturas()
 
     # Agregar el código SIRET a todos los registros de facturas
     if siret_code:
-        df_facturas["SIRET"] = siret_code
+        df_facturas["siret"] = siret_code
 
     # Generar el archivo CSV de facturas
     ruta_salida_facturas = os.path.join(output_directory, "factures.csv")
-    generar_csv_facturas(df_facturas, ruta_salida_facturas)
+    error_file_facturas = config["GENERAL"].get("error_file_facturas", "errors.csv")
+    ruta_archivo_errores = os.path.join(output_directory, error_file_facturas)
+
+    generar_csv_facturas(df_facturas, ruta_salida_facturas, ruta_archivo_errores)
 
     # Generar el archivo ZIP
     if siret_code:
