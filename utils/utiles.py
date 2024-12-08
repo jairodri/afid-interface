@@ -1,6 +1,7 @@
 import datetime
 import zipfile
 import os
+import pandas as pd
 
 
 def generar_fichero_zip(output_directory, siret_code):
@@ -36,3 +37,27 @@ def generar_fichero_zip(output_directory, siret_code):
     
     print(f"Archivo ZIP generado correctamente: {ruta_zip}")
     return ruta_zip
+
+
+def limpiar_separadores(df, columna, separadores=["-"]):
+    """
+    Elimina los separadores especificados de los valores de una columna en un DataFrame.
+
+    Parámetros:
+    - df (pd.DataFrame): El DataFrame que contiene los datos.
+    - columna (str): El nombre de la columna a limpiar.
+    - separadores (list): Lista de separadores a eliminar (por defecto, ["-"]).
+
+    Retorna:
+        pd.DataFrame: El DataFrame con la columna limpia.
+    """
+    if columna not in df.columns:
+        raise ValueError(f"La columna '{columna}' no existe en el DataFrame.")
+
+    # Crear una expresión regular para los separadores
+    separadores_regex = f"[{''.join(separadores)}]"
+
+    # Limpiar la columna eliminando los separadores
+    df[columna] = df[columna].astype(str).str.replace(separadores_regex, "", regex=True).replace("nan", None)
+
+    return df

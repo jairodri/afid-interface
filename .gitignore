@@ -1,6 +1,7 @@
 # app specific
-data/
+export_afid/
 test/
+*.ini
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
